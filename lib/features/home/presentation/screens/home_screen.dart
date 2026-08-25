@@ -202,7 +202,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               IconButton(
                 icon: const Icon(Icons.notifications_none),
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Fitur dalam pengembangan.')),
+                  );
+                },
                 color: AppColors.textPrimary,
               ),
               IconButton(

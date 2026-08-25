@@ -54,15 +54,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     try {
       final auth = context.read<AuthBloc>().state;
       if (auth is! AuthAuthenticated) {
-        setState(() => _loading = false);
+        setState(() {
+          _loading = false;
+          _error = 'Silakan login untuk checkout.';
+        });
         return;
       }
       _addresses = await _addressRepo.list();
-      _selectedAddress = _addresses.firstWhere(
-        (a) => a.isPrimary,
-        orElse: () =>
-            _addresses.isNotEmpty ? _addresses.first : _addresses.first,
-      );
+      _selectedAddress = _addresses.isEmpty
+          ? null
+          : _addresses.firstWhere(
+              (a) => a.isPrimary,
+              orElse: () => _addresses.first,
+            );
       await _refreshPreview();
     } catch (e) {
       setState(() => _error = e.toString());
@@ -179,8 +183,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             (c) => ChoiceChip(
                               label: Text('${c.code} · ${c.label}'),
                               selected: _selectedService == c.code,
-                              onSelected: (_) =>
-                                  setState(() => _selectedService = c.code),
+                              onSelected: (_) async {
+                                setState(() => _selectedService = c.code);
+                                await _refreshPreview();
+                              },
                             ),
                           )
                           .toList(),
@@ -342,6 +348,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _placeOrder() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Silakan login untuk checkout.')),
+      );
+      return;
+    }
     if (_selectedAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -352,7 +365,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
     setState(() => _placing = true);
     try {
-      final user = (context.read<AuthBloc>().state as AuthAuthenticated).user;
+      final user = authState.user;
       final place = await _checkoutRepo.placeOrder({
         'shipping_address_id': _selectedAddress!.id,
         'shipping_courier': _selectedCourier,
@@ -491,7 +504,8 @@ class _Section extends StatelessWidget {
                   ),
                 ),
               ),
-              ?trailing,
+              // ignore: use_null_aware_elements
+              if (trailing != null) trailing!,
             ],
           ),
           const SizedBox(height: AppSpacing.sm),

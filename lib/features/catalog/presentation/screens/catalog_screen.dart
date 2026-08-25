@@ -269,11 +269,26 @@ class _FilterSheet extends StatefulWidget {
 
 class _FilterSheetState extends State<_FilterSheet> {
   late CatalogFilters _draft;
+  late TextEditingController _minPriceController;
+  late TextEditingController _maxPriceController;
 
   @override
   void initState() {
     super.initState();
     _draft = context.read<CatalogBloc>().state.filters;
+    _minPriceController = TextEditingController(
+      text: _draft.minPrice?.toStringAsFixed(0) ?? '',
+    );
+    _maxPriceController = TextEditingController(
+      text: _draft.maxPrice?.toStringAsFixed(0) ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _minPriceController.dispose();
+    _maxPriceController.dispose();
+    super.dispose();
   }
 
   @override
@@ -331,25 +346,35 @@ class _FilterSheetState extends State<_FilterSheet> {
               children: [
                 Expanded(
                   child: TextField(
+                    controller: _minPriceController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       hintText: 'Min',
                       isDense: true,
                     ),
-                    onChanged: (v) =>
-                        _draft = _draft.copyWith(minPrice: double.tryParse(v)),
+                    onChanged: (v) {
+                      final val = double.tryParse(v);
+                      _draft = val != null
+                          ? _draft.copyWith(minPrice: val)
+                          : _draft.copyWith(clearMinPrice: true);
+                    },
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: TextField(
+                    controller: _maxPriceController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       hintText: 'Max',
                       isDense: true,
                     ),
-                    onChanged: (v) =>
-                        _draft = _draft.copyWith(maxPrice: double.tryParse(v)),
+                    onChanged: (v) {
+                      final val = double.tryParse(v);
+                      _draft = val != null
+                          ? _draft.copyWith(maxPrice: val)
+                          : _draft.copyWith(clearMaxPrice: true);
+                    },
                   ),
                 ),
               ],

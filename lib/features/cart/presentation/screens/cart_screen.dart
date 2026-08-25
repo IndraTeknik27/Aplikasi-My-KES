@@ -28,7 +28,25 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Keranjang')),
+      appBar: AppBar(
+        title: const Text('Keranjang'),
+        actions: [
+          BlocBuilder<CartBloc, CartState>(
+            builder: (context, state) {
+              if (state.cart.isEmpty) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(right: AppSpacing.sm),
+                child: Center(
+                  child: Badge(
+                    label: Text('${state.cart.itemCount}'),
+                    child: const Icon(Icons.shopping_cart_outlined),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: BlocConsumer<CartBloc, CartState>(
         listenWhen: (p, c) =>
             p.lastMessage != c.lastMessage || p.errorMessage != c.errorMessage,
@@ -71,6 +89,56 @@ class _CartScreenState extends State<CartScreen> {
                       foreground: AppColors.primary,
                     ),
                   ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    0,
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        '${state.cart.itemCount} item di keranjang',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () async {
+                          final ok = await showDialog<bool>(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              title: const Text('Kosongkan keranjang?'),
+                              content: const Text(
+                                'Semua item akan dihapus dari keranjang.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(false),
+                                  child: const Text('Batal'),
+                                ),
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(true),
+                                  child: const Text('Kosongkan'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (ok == true && context.mounted) {
+                            context.read<CartBloc>().add(const CartCleared());
+                          }
+                        },
+                        child: const Text('Kosongkan'),
+                      ),
+                    ],
+                  ),
+                ),
                 ...state.cart.items.map(
                   (it) => Column(
                     children: [
@@ -79,7 +147,8 @@ class _CartScreenState extends State<CartScreen> {
                         name: it.name ?? 'Produk',
                         imageUrl: it.imageUrl,
                         price: it.price,
-                        priceLabel: Money.format(it.subtotal),
+                        priceLabel:
+                            '${Money.format(it.price)} × ${it.qty}',
                         quantity: it.qty,
                         showQtyControls: true,
                         onQtyChange: (v) => context.read<CartBloc>().add(

@@ -22,6 +22,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _qty = 1;
   int? _selectedVariationId;
   int _imageIndex = 0;
+  bool _addingToCart = false;
 
   late Future<ProductDetail> _detailFuture;
   late Future<List<ProductSummary>> _relatedFuture;
@@ -71,7 +72,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 actions: [
                   IconButton(
                     icon: const Icon(Icons.share_outlined),
-                    onPressed: () {},
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Fitur dalam pengembangan.')),
+                      );
+                    },
                   ),
                   IconButton(
                     icon: const Icon(Icons.shopping_cart_outlined),
@@ -101,18 +106,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.chat_outlined),
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Fitur dalam pengembangan.')),
+                  );
+                },
                 tooltip: 'Chat',
               ),
               IconButton(
                 icon: const Icon(Icons.favorite_outline),
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Fitur dalam pengembangan.')),
+                  );
+                },
                 tooltip: 'Wishlist',
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => _addToCart(context),
+                  onPressed: _addingToCart ? null : () => _addToCart(context),
                   icon: const Icon(Icons.shopping_cart_outlined),
                   label: const Text('Tambah ke Keranjang'),
                 ),
@@ -511,34 +524,39 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _addToCart(BuildContext context) async {
-    late ProductDetail p;
-    p = await _detailFuture;
-    if (!context.mounted) return;
-    final variationId = _selectedVariationId;
-    if (variationId != null) {
-      context.read<CartBloc>().add(
-        CartItemAdded(
-          itemableType: 'variation',
-          itemableId: variationId,
-          qty: _qty,
+    setState(() => _addingToCart = true);
+    try {
+      late ProductDetail p;
+      p = await _detailFuture;
+      if (!context.mounted) return;
+      final variationId = _selectedVariationId;
+      if (variationId != null) {
+        context.read<CartBloc>().add(
+          CartItemAdded(
+            itemableType: 'variation',
+            itemableId: variationId,
+            qty: _qty,
+          ),
+        );
+      } else {
+        context.read<CartBloc>().add(
+          CartItemAdded(itemableType: 'product', itemableId: p.id, qty: _qty),
+        );
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Ditambahkan ke keranjang'),
+          action: SnackBarAction(
+            label: 'Lihat',
+            onPressed: () => context.go('/cart'),
+          ),
         ),
       );
-    } else {
-      context.read<CartBloc>().add(
-        CartItemAdded(itemableType: 'product', itemableId: p.id, qty: _qty),
-      );
+    } finally {
+      if (mounted) setState(() => _addingToCart = false);
     }
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Ditambahkan ke keranjang'),
-        action: SnackBarAction(
-          label: 'Lihat',
-          onPressed: () => context.go('/cart'),
-        ),
-      ),
-    );
   }
 }
 

@@ -35,7 +35,9 @@ class CatalogFilters extends Equatable {
     bool? bestseller,
     bool? isNew,
     double? minPrice,
+    bool clearMinPrice = false,
     double? maxPrice,
+    bool clearMaxPrice = false,
     String? search,
     String? sort,
     int? perPage,
@@ -47,11 +49,27 @@ class CatalogFilters extends Equatable {
       featured: featured ?? this.featured,
       bestseller: bestseller ?? this.bestseller,
       isNew: isNew ?? this.isNew,
-      minPrice: minPrice ?? this.minPrice,
-      maxPrice: maxPrice ?? this.maxPrice,
+      minPrice: clearMinPrice ? null : (minPrice ?? this.minPrice),
+      maxPrice: clearMaxPrice ? null : (maxPrice ?? this.maxPrice),
       search: search ?? this.search,
       sort: sort ?? this.sort,
       perPage: perPage ?? this.perPage,
+    );
+  }
+
+  CatalogFilters clearPriceRange() {
+    return CatalogFilters(
+      categoryId: categoryId,
+      categorySlug: categorySlug,
+      brandId: brandId,
+      featured: featured,
+      bestseller: bestseller,
+      isNew: isNew,
+      minPrice: null,
+      maxPrice: null,
+      search: search,
+      sort: sort,
+      perPage: perPage,
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/product_card.dart';
@@ -49,12 +50,12 @@ class _WishlistScreenState extends State<WishlistScreen> {
           }
           final items = snap.data ?? const <ProductSummary>[];
           if (items.isEmpty) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.favorite_outline,
               title: 'Wishlist kosong',
               subtitle: 'Tambahkan produk favorit dengan menekan ikon hati.',
               actionLabel: 'Jelajahi Produk',
-              onAction: null,
+              onAction: () => context.go('/'),
             );
           }
           return RefreshIndicator(

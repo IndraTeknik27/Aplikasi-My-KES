@@ -45,10 +45,18 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
     setState(() => _loading = true);
     try {
       final list = await _repo.list();
-      final match = list.firstWhere(
-        (a) => a.id == widget.addressId,
-        orElse: () => list.first,
-      );
+      if (list.isEmpty) {
+        if (mounted) Navigator.of(context).pop(false);
+        return;
+      }
+      final match = list.cast<Address?>().firstWhere(
+            (a) => a?.id == widget.addressId,
+            orElse: () => null,
+          );
+      if (match == null) {
+        if (mounted) Navigator.of(context).pop(false);
+        return;
+      }
       _label.text = match.label ?? '';
       _recipient.text = match.recipient;
       _phone.text = match.phone;

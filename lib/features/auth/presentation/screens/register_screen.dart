@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,8 +21,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phone = TextEditingController();
   final _pass = TextEditingController();
   final _confirm = TextEditingController();
+  final _termsRecognizer = TapGestureRecognizer();
+  final _privacyRecognizer = TapGestureRecognizer();
   bool _showPass = false;
   bool _agree = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _termsRecognizer.onTap = () {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fitur dalam pengembangan.')),
+      );
+    };
+    _privacyRecognizer.onTap = () {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fitur dalam pengembangan.')),
+      );
+    };
+    _pass.addListener(_onPasswordChanged);
+  }
+
+  void _onPasswordChanged() {
+    if (_confirm.text.isNotEmpty) {
+      _formKey.currentState?.validate();
+    }
+  }
 
   @override
   void dispose() {
@@ -30,6 +55,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _phone.dispose();
     _pass.dispose();
     _confirm.dispose();
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
+    _pass.removeListener(_onPasswordChanged);
     super.dispose();
   }
 
@@ -210,30 +238,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: Padding(
                           padding: const EdgeInsets.only(top: 12),
                           child: RichText(
-                            text: const TextSpan(
-                              style: TextStyle(
+                            text: TextSpan(
+                              style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary,
                                 height: 1.4,
                               ),
                               children: [
-                                TextSpan(text: 'Saya menyetujui '),
+                                const TextSpan(text: 'Saya menyetujui '),
                                 TextSpan(
+                                  recognizer: _termsRecognizer,
                                   text: 'Syarat & Ketentuan',
                                   style: TextStyle(
                                     color: AppColors.primary,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                TextSpan(text: ' serta '),
+                                const TextSpan(text: ' serta '),
                                 TextSpan(
+                                  recognizer: _privacyRecognizer,
                                   text: 'Kebijakan Privasi',
                                   style: TextStyle(
                                     color: AppColors.primary,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                TextSpan(text: ' KARTEKS.'),
+                                const TextSpan(text: ' KARTEKS.'),
                               ],
                             ),
                           ),

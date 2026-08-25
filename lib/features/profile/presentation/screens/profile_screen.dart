@@ -60,12 +60,20 @@ class ProfileScreen extends StatelessWidget {
                     _Item(
                       icon: Icons.help_outline,
                       label: 'Bantuan & FAQ',
-                      onTap: () {},
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Fitur dalam pengembangan.')),
+                        );
+                      },
                     ),
                     _Item(
                       icon: Icons.policy_outlined,
                       label: 'Kebijakan Privasi',
-                      onTap: () {},
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Fitur dalam pengembangan.')),
+                        );
+                      },
                     ),
                     _Item(
                       icon: Icons.info_outline,

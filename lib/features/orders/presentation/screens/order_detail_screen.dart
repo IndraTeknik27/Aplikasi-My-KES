@@ -452,43 +452,47 @@ class _Actions extends StatelessWidget {
 
   Future<void> _confirmCancel(BuildContext context) async {
     final reason = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Batalkan pesanan?'),
-        content: TextField(
-          controller: reason,
-          decoration: const InputDecoration(
-            labelText: 'Alasan pembatalan',
-            hintText: 'Minimal 5 karakter',
+    try {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Batalkan pesanan?'),
+          content: TextField(
+            controller: reason,
+            decoration: const InputDecoration(
+              labelText: 'Alasan pembatalan',
+              hintText: 'Minimal 5 karakter',
+            ),
+            maxLines: 3,
           ),
-          maxLines: 3,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Tidak'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Batalkan'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Tidak'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Batalkan'),
-          ),
-        ],
-      ),
-    );
-    if (ok == true && reason.text.trim().length >= 5) {
-      try {
-        await OrderRepository().cancel(
-          order.orderNumber,
-          reason: reason.text.trim(),
-        );
-        await onChanged();
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(e.toString())));
+      );
+      if (ok == true && reason.text.trim().length >= 5) {
+        try {
+          await OrderRepository().cancel(
+            order.orderNumber,
+            reason: reason.text.trim(),
+          );
+          await onChanged();
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text(e.toString())));
+          }
         }
       }
+    } finally {
+      reason.dispose();
     }
   }
 
