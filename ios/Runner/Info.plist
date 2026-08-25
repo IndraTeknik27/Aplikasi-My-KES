@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>My Kes</string>
+	<string>My KES</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -26,6 +26,52 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+
+	<!--
+	  App Transport Security. The Laravel dev backend is served over plain
+	  HTTP on a *.test domain. Production traffic should always be HTTPS.
+	  See https://developer.apple.com/documentation/bundleresources/
+	  information_property_list/nsapptransportsecurity
+	-->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>karteks-energy-solution.test</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+
+	<!--
+	  Push notification and background fetch modes. firebase_messaging uses
+	  these for delivery when the app is in the background or terminated.
+	-->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+	</array>
+
+	<!--
+	  Permission strings shown to the user when iOS prompts for push
+	  notifications. Keep them short and accurate.
+	-->
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Kami mengirim notifikasi untuk pembaruan pesanan, promo, dan pengingat penting lainnya.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
