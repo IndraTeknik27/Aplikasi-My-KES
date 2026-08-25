@@ -209,8 +209,8 @@ class _SkeletonState extends State<Skeleton>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctl,
+    return ListenableBuilder(
+      listenable: _ctl,
       builder: (_, _) {
         return Container(
           width: widget.width,

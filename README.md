@@ -206,7 +206,7 @@ my_kes/
 │       │   │                            Skeleton
 │       │   └── product_card.dart     ← ProductCard (grid) + ProductTile (list)
 │       └── utils/
-│           └── pagination.dart
+│           └── pagination.dart       ← PaginationMeta helper (shared/utils/)
 ├── test/
 │   ├── widget_test.dart               ← smoke test for splash
 │   └── features/

@@ -8,6 +8,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/common.dart';
 import '../../../../shared/widgets/product_card.dart';
 import '../../../../shared/widgets/states.dart';
+import '../../../auth/bloc/auth_bloc.dart';
 import '../../bloc/cart_bloc.dart';
 import '../../data/cart_repository.dart';
 
@@ -22,32 +23,25 @@ class _CartScreenState extends State<CartScreen> {
   @override
   void initState() {
     super.initState();
+    // Always fetch fresh cart data on screen mount
+    context.read<CartBloc>().add(const CartLoadRequested());
+  }
+
+  @override
+  void didUpdateWidget(covariant CartScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reload when returning to this screen (e.g. after checkout)
     context.read<CartBloc>().add(const CartLoadRequested());
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Keranjang'),
-        actions: [
-          BlocBuilder<CartBloc, CartState>(
-            builder: (context, state) {
-              if (state.cart.isEmpty) return const SizedBox.shrink();
-              return Padding(
-                padding: const EdgeInsets.only(right: AppSpacing.sm),
-                child: Center(
-                  child: Badge(
-                    label: Text('${state.cart.itemCount}'),
-                    child: const Icon(Icons.shopping_cart_outlined),
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: BlocConsumer<CartBloc, CartState>(
+    return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (a, b) => b is AuthUnauthenticated,
+      listener: (previous, current) {
+        context.read<CartBloc>().add(const CartLoadRequested());
+      },
+      child: BlocConsumer<CartBloc, CartState>(
         listenWhen: (p, c) =>
             p.lastMessage != c.lastMessage || p.errorMessage != c.errorMessage,
         listener: (context, state) {
@@ -61,129 +55,152 @@ class _CartScreenState extends State<CartScreen> {
           }
         },
         builder: (context, state) {
-          if (state.status == CartStatus.loading && state.cart.isEmpty) {
-            return const LoadingIndicator();
-          }
-          if (state.cart.isEmpty) {
-            return EmptyState(
-              icon: Icons.shopping_cart_outlined,
-              title: 'Keranjangmu kosong',
-              subtitle: 'Yuk, mulai belanja produk energy solution.',
-              actionLabel: 'Mulai Belanja',
-              onAction: () => context.go(Routes.catalog),
-            );
-          }
-          return RefreshIndicator(
-            onRefresh: () async =>
-                context.read<CartBloc>().add(const CartLoadRequested()),
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
-              children: [
-                if (state.cart.customerId == null)
+          final isEmpty = state.cart.items.isEmpty;
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Keranjang'),
+              actions: [
+                if (!isEmpty)
                   Padding(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: InlineBanner(
-                      message: 'Login untuk menyimpan keranjang ke akun Anda.',
-                      icon: Icons.info_outline,
-                      background: AppColors.primary.withValues(alpha: 0.08),
-                      foreground: AppColors.primary,
+                    padding: const EdgeInsets.only(right: AppSpacing.sm),
+                    child: Center(
+                      child: Badge(
+                        label: Text('${state.cart.itemCount}'),
+                        child: const Icon(Icons.shopping_cart_outlined),
+                      ),
                     ),
                   ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
-                    0,
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        '${state.cart.itemCount} item di keranjang',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () async {
-                          final ok = await showDialog<bool>(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              title: const Text('Kosongkan keranjang?'),
-                              content: const Text(
-                                'Semua item akan dihapus dari keranjang.',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(context).pop(false),
-                                  child: const Text('Batal'),
-                                ),
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(context).pop(true),
-                                  child: const Text('Kosongkan'),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (ok == true && context.mounted) {
-                            context.read<CartBloc>().add(const CartCleared());
-                          }
-                        },
-                        child: const Text('Kosongkan'),
-                      ),
-                    ],
-                  ),
-                ),
-                ...state.cart.items.map(
-                  (it) => Column(
-                    children: [
-                      ProductTile(
-                        slug: it.slug ?? '',
-                        name: it.name ?? 'Produk',
-                        imageUrl: it.imageUrl,
-                        price: it.price,
-                        priceLabel:
-                            '${Money.format(it.price)} × ${it.qty}',
-                        quantity: it.qty,
-                        showQtyControls: true,
-                        onQtyChange: (v) => context.read<CartBloc>().add(
-                          CartItemUpdated(it.id, v),
-                        ),
-                        onRemove: () => _confirmRemove(it),
-                      ),
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                _CouponSection(state: state),
-                const SizedBox(height: AppSpacing.lg),
-                _Summary(state: state),
               ],
             ),
+            body: _buildBody(context, state),
+            bottomNavigationBar: isEmpty ? null : _buildBottomBar(context, state),
           );
         },
       ),
-      bottomNavigationBar: BlocBuilder<CartBloc, CartState>(
-        builder: (context, state) {
-          if (state.cart.isEmpty) return const SizedBox.shrink();
-          return SafeArea(
-            child: Padding(
+    );
+  }
+
+  Widget _buildBody(BuildContext context, CartState state) {
+    if (state.status == CartStatus.loading && state.cart.items.isEmpty) {
+      return const LoadingIndicator();
+    }
+    if (state.cart.items.isEmpty) {
+      return EmptyState(
+        icon: Icons.shopping_cart_outlined,
+        title: 'Keranjangmu kosong',
+        subtitle: 'Yuk, mulai belanja produk energy solution.',
+        actionLabel: 'Mulai Belanja',
+        onAction: () => context.go(Routes.catalog),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: () async =>
+          context.read<CartBloc>().add(const CartLoadRequested()),
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
+        children: [
+          if (state.cart.customerId == null)
+            Padding(
               padding: const EdgeInsets.all(AppSpacing.lg),
-              child: LoadingButton(
-                onPressed: state.mutationInProgress
-                    ? null
-                    : () => context.push(Routes.checkout),
-                child: Text('Checkout  •  ${Money.format(state.cart.total)}'),
+              child: InlineBanner(
+                message: 'Login untuk menyimpan keranjang ke akun Anda.',
+                icon: Icons.info_outline,
+                background: AppColors.primary.withValues(alpha: 0.08),
+                foreground: AppColors.primary,
               ),
             ),
-          );
-        },
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              0,
+            ),
+            child: Row(
+              children: [
+                Text(
+                  '${state.cart.itemCount} item di keranjang',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () async {
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text('Kosongkan keranjang?'),
+                        content: const Text(
+                          'Semua item akan dihapus dari keranjang.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Batal'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text('Kosongkan'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (ok == true && context.mounted) {
+                      context.read<CartBloc>().add(const CartCleared());
+                    }
+                  },
+                  child: const Text('Kosongkan'),
+                ),
+              ],
+            ),
+          ),
+          ...state.cart.items.map(
+            (it) => Column(
+              children: [
+                ProductTile(
+                  slug: it.slug ?? '',
+                  name: it.name ?? 'Produk',
+                  imageUrl: it.imageUrl,
+                  price: it.price,
+                  priceLabel: '${Money.format(it.price)} × ${it.qty}',
+                  quantity: it.qty,
+                  showQtyControls: true,
+                  onQtyChange: (v) => context.read<CartBloc>().add(
+                    CartItemUpdated(it.id, v),
+                  ),
+                  onRemove: () => _confirmRemove(it),
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _CouponSection(state: state),
+          const SizedBox(height: AppSpacing.lg),
+          _Summary(state: state),
+        ],
+      ),
+    );
+  }
+
+  Widget? _buildBottomBar(BuildContext context, CartState state) {
+    // Force-hide bar when items list is empty, regardless of stale totals
+    if (state.cart.items.isEmpty) {
+      debugPrint('[CartScreen] Hiding bottom bar: items empty');
+      return const SizedBox.shrink();
+    }
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: LoadingButton(
+          onPressed: state.mutationInProgress
+              ? null
+              : () => context.push(Routes.checkout),
+          child: Text('Checkout  •  ${Money.format(state.cart.total)}'),
+        ),
       ),
     );
   }
