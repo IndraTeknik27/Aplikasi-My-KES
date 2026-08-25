@@ -175,29 +175,35 @@ class ProductCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       if (salePrice != null) ...[
-                        Text(
-                          Money.format(salePrice),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.error,
+                        Flexible(
+                          child: Text(
+                            Money.format(salePrice),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.error,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 6),
                       ],
-                      Text(
-                        Money.format(salePrice ?? price),
-                        style: TextStyle(
-                          fontSize: salePrice != null ? 11 : 14,
-                          color: salePrice != null
-                              ? AppColors.textMuted
-                              : AppColors.textPrimary,
-                          fontWeight: salePrice != null
-                              ? FontWeight.w400
-                              : FontWeight.w800,
-                          decoration: salePrice != null
-                              ? TextDecoration.lineThrough
-                              : null,
+                      Flexible(
+                        child: Text(
+                          Money.format(salePrice ?? price),
+                          style: TextStyle(
+                            fontSize: salePrice != null ? 11 : 14,
+                            color: salePrice != null
+                                ? AppColors.textMuted
+                                : AppColors.textPrimary,
+                            fontWeight: salePrice != null
+                                ? FontWeight.w400
+                                : FontWeight.w800,
+                            decoration: salePrice != null
+                                ? TextDecoration.lineThrough
+                                : null,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

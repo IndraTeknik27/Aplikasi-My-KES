@@ -11,6 +11,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/common.dart';
 import '../../../../shared/widgets/states.dart';
 import '../../../auth/bloc/auth_bloc.dart';
+import '../../../cart/bloc/cart_bloc.dart';
 import '../../../profile/data/address_repository.dart';
 import '../../data/checkout_repository.dart';
 import '../../data/payment_repository.dart';
@@ -37,12 +38,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String _couponCode = '';
   String _paymentMethod = 'midtrans';
   bool _loading = true;
+  bool _cartLoading = true;
   bool _placing = false;
   String? _error;
+  CartState? _cartState;
 
   @override
   void initState() {
     super.initState();
+    // Ensure cart is loaded before fetching preview
+    context.read<CartBloc>().add(const CartLoadRequested());
     _load();
   }
 
@@ -76,29 +81,75 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _refreshPreview() async {
-    final res = await _checkoutRepo.preview(
-      shippingAddressId: _selectedAddress?.id,
-      shippingCourier: _selectedCourier,
-      couponCode: _couponCode.isEmpty ? null : _couponCode,
-    );
-    if (mounted) setState(() => _preview = res);
+    try {
+      final res = await _checkoutRepo.preview(
+        shippingAddressId: _selectedAddress?.id,
+        shippingCourier: _selectedCourier,
+        couponCode: _couponCode.isEmpty ? null : _couponCode,
+      );
+      if (mounted && res.isNotEmpty) {
+        setState(() => _preview = res);
+      }
+    } catch (e) {
+      // Silently ignore preview errors — user can still see cart items via CartBloc
+      debugPrint('[Checkout] Preview error: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Checkout')),
-      body: _loading
-          ? const LoadingIndicator()
-          : _error != null
-          ? ErrorState(message: _error!, onRetry: _load)
-          : _buildContent(),
-      bottomNavigationBar: _preview == null ? null : _buildBottomBar(),
+      body: BlocListener<CartBloc, CartState>(
+        listener: (context, state) {
+          _cartState = state;
+        },
+        child: BlocBuilder<CartBloc, CartState>(
+          builder: (context, cartState) {
+            _cartState = cartState;
+            return _loading
+              ? const LoadingIndicator()
+              : _error != null
+                  ? ErrorState(message: _error!, onRetry: _load)
+                  : _buildContent();
+        },
+      ),
+    ),
+    bottomNavigationBar: _buildBottomBar(),
     );
   }
 
+
+  bool get _hasItems {
+    if (_preview != null && (_preview!['items'] as List?)?.isNotEmpty == true) return true;
+    final cartState = context.read<CartBloc>().state;
+    return cartState.cart.items.isNotEmpty;
+  }
+
+  double get _cartTotal {
+    if (_preview != null) {
+      return _toDouble(_preview!['total']) ?? 0;
+    }
+    return context.read<CartBloc>().state.cart.total;
+  }
+
   Widget _buildContent() {
-    final p = _preview!;
+    // _preview can be null if API preview failed — fallback to CartBloc data
+    final p = _preview;
+    final hasCartItems = (_cartState ?? context.read<CartBloc>().state).cart.items.isNotEmpty;
+    if (p == null && !hasCartItems) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.shopping_cart_outlined,
+                size: 48, color: AppColors.textMuted),
+            const SizedBox(height: AppSpacing.md),
+            const Text('Tidak ada item di keranjang.'),
+          ],
+        ),
+      );
+    }
     return BlocListener<AuthBloc, AuthState>(
       listenWhen: (a, b) => b is AuthUnauthenticated,
       listener: (_, _) => context.go(Routes.login),
@@ -146,6 +197,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                   ),
           ),
+          const SizedBox(height: AppSpacing.md),
+          if (_selectedAddress != null &&
+              (_selectedAddress!.senderName != null ||
+                  _selectedAddress!.senderAddress != null))
+            _buildSenderAddressSection(),
           const SizedBox(height: AppSpacing.md),
           _Section(
             title: 'Metode Pengiriman',
@@ -195,7 +251,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          _Section(title: 'Item Pesanan', child: _buildItems(p)),
+          _Section(title: 'Item Pesanan', child: _buildItems(_preview)),
           const SizedBox(height: AppSpacing.md),
           _Section(
             title: 'Pembayaran',
@@ -245,13 +301,41 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          _buildTotals(p),
+          _buildTotals(_preview),
         ],
       ),
     );
   }
 
-  Widget _buildItems(Map<String, dynamic> p) {
+  Widget _buildItems(Map<String, dynamic>? p) {
+    // Use CartBloc items when preview is not available
+    if (p == null || (p['items'] as List?)?.isEmpty != false) {
+      final cartItems = (_cartState ?? context.read<CartBloc>().state).cart.items;
+      if (cartItems.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+          child: Text('Tidak ada item'),
+        );
+      }
+      return Column(
+        children: cartItems.map<Widget>((item) {
+          return ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              item.name ?? 'Produk',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text('× ${item.qty}',
+                style: const TextStyle(fontSize: 12)),
+            trailing: Text(
+              Money.format(item.subtotal),
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          );
+        }).toList(),
+      );
+    }
+
     final items = (p['items'] as List?) ?? const [];
     if (items.isEmpty) {
       return const Padding(
@@ -281,12 +365,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildTotals(Map<String, dynamic> p) {
-    final subtotal = _toDouble(p['subtotal']) ?? 0;
-    final discount = _toDouble(p['discount']) ?? 0;
-    final tax = _toDouble(p['tax']) ?? 0;
-    final shipping = _toDouble(p['shipping_cost']) ?? 0;
-    final total = _toDouble(p['total']) ?? 0;
+  Widget _buildTotals(Map<String, dynamic>? p) {
+    double subtotal = 0, discount = 0, tax = 0, shipping = 0, total = 0;
+
+    if (p != null && p.isNotEmpty) {
+      subtotal = _toDouble(p['subtotal']) ?? 0;
+      discount = _toDouble(p['discount']) ?? 0;
+      tax = _toDouble(p['tax']) ?? 0;
+      shipping = _toDouble(p['shipping_cost']) ?? 0;
+      total = _toDouble(p['total']) ?? 0;
+    } else {
+      final cart = (_cartState ?? context.read<CartBloc>().state).cart;
+      subtotal = cart.subtotal;
+      discount = cart.discount;
+      tax = cart.tax;
+      shipping = cart.shippingCost;
+      total = cart.total;
+    }
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -312,14 +408,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildBottomBar() {
-    final p = _preview!;
-    final total = _toDouble(p['total']) ?? 0;
+  Widget? _buildBottomBar() {
+    if (!_hasItems) return null;
+    final total = _cartTotal;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: LoadingButton(
-          onPressed: _placing ? null : _placeOrder,
+          onPressed: _placing ? null : () => _placeOrder(),
           loading: _placing,
           child: Text('Bayar Sekarang  •  ${Money.format(total)}'),
         ),
@@ -342,6 +438,72 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             icon: const Icon(Icons.add_location_alt_outlined),
             label: const Text('Tambah Alamat'),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSenderAddressSection() {
+    final addr = _selectedAddress!;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.local_shipping_outlined,
+                  size: 16, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                'Alamat Pengirim',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            addr.senderName ?? 'E-Clont Solusi Energi',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (addr.senderPhone != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              addr.senderPhone!,
+              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            ),
+          ],
+          if (addr.senderAddress != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              addr.senderAddress!,
+              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            ),
+          ],
+          if (addr.senderNotes != null && addr.senderNotes!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Catatan: ${addr.senderNotes}',
+              style: const TextStyle(
+                fontSize: 11,
+                fontStyle: FontStyle.italic,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ],
         ],
       ),
     );

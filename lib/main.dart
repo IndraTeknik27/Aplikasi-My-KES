@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'app/router.dart';
 import 'app/theme.dart';
@@ -17,6 +18,10 @@ import 'features/home/bloc/home_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize intl locale data BEFORE any DateFormat calls
+  await initializeDateFormatting('id_ID', null);
+
   await FcmService.init();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

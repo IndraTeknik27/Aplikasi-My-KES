@@ -63,6 +63,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
     try {
+      // Read guest cart session ID for cart merge on login
+      final sessionId = await SecureStorage.readCartSessionId();
+      final headers = <String, String>{};
+      if (sessionId != null && sessionId.isNotEmpty) {
+        headers['X-Session-Id'] = sessionId;
+      }
+
       final res = await _api.post<Map<String, dynamic>>(
         ApiEndpoints.login,
         body: {
@@ -71,6 +78,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           'device_name': event.deviceName,
           'remember': event.remember,
         },
+        headers: headers,
       );
       final data = res.data;
       if (data == null) {
@@ -106,6 +114,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
     try {
+      // Read guest cart session ID for cart merge on registration
+      final sessionId = await SecureStorage.readCartSessionId();
+      final headers = <String, String>{};
+      if (sessionId != null && sessionId.isNotEmpty) {
+        headers['X-Session-Id'] = sessionId;
+      }
+
       final res = await _api.post<Map<String, dynamic>>(
         ApiEndpoints.register,
         body: {
@@ -118,6 +133,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           if (event.birthDate != null) 'birth_date': event.birthDate,
           'device_name': event.deviceName,
         },
+        headers: headers,
       );
       final data = res.data;
       if (data == null) {

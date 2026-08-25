@@ -310,16 +310,19 @@ class _CouponSectionState extends State<_CouponSection> {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          ElevatedButton(
-            onPressed: widget.state.mutationInProgress
-                ? null
-                : () {
-                    if (_ctl.text.trim().isEmpty) return;
-                    context.read<CartBloc>().add(
-                      CartCouponApplied(_ctl.text.trim()),
-                    );
-                  },
-            child: const Text('Pakai'),
+          SizedBox(
+            width: 80,
+            child: ElevatedButton(
+              onPressed: widget.state.mutationInProgress
+                  ? null
+                  : () {
+                      if (_ctl.text.trim().isEmpty) return;
+                      context.read<CartBloc>().add(
+                        CartCouponApplied(_ctl.text.trim()),
+                      );
+                    },
+              child: const Text('Pakai'),
+            ),
           ),
         ],
       ),

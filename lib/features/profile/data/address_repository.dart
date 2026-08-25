@@ -18,6 +18,11 @@ class Address {
   final String? notes;
   final bool isPrimary;
   final String? fullAddress;
+  // Sender address (alamat pengirim / return address)
+  final String? senderName;
+  final String? senderPhone;
+  final String? senderAddress;
+  final String? senderNotes;
   final String? createdAt;
   final String? updatedAt;
 
@@ -38,6 +43,10 @@ class Address {
     this.notes,
     required this.isPrimary,
     this.fullAddress,
+    this.senderName,
+    this.senderPhone,
+    this.senderAddress,
+    this.senderNotes,
     this.createdAt,
     this.updatedAt,
   });
@@ -60,6 +69,11 @@ class Address {
       notes: json['notes'] as String?,
       isPrimary: json['is_primary'] == true,
       fullAddress: json['full_address'] as String?,
+      // Sender address fields
+      senderName: json['sender_name'] as String?,
+      senderPhone: json['sender_phone'] as String?,
+      senderAddress: json['sender_address'] as String?,
+      senderNotes: json['sender_notes'] as String?,
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
     );

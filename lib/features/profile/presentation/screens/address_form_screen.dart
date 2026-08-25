@@ -31,6 +31,11 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
   final _village = TextEditingController();
   final _postal = TextEditingController();
   final _notes = TextEditingController();
+  // Sender address fields
+  final _senderName = TextEditingController();
+  final _senderPhone = TextEditingController();
+  final _senderAddress = TextEditingController();
+  final _senderNotes = TextEditingController();
   bool _isPrimary = false;
 
   bool get _isEdit => widget.addressId != null;
@@ -69,6 +74,11 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
       _postal.text = match.postalCode;
       _notes.text = match.notes ?? '';
       _isPrimary = match.isPrimary;
+      // Sender address fields
+      _senderName.text = match.senderName ?? '';
+      _senderPhone.text = match.senderPhone ?? '';
+      _senderAddress.text = match.senderAddress ?? '';
+      _senderNotes.text = match.senderNotes ?? '';
     } catch (_) {
       /* ignore */
     }
@@ -88,6 +98,10 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
     _village.dispose();
     _postal.dispose();
     _notes.dispose();
+    _senderName.dispose();
+    _senderPhone.dispose();
+    _senderAddress.dispose();
+    _senderNotes.dispose();
     super.dispose();
   }
 
@@ -107,6 +121,14 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
       'postal_code': _postal.text.trim(),
       if (_notes.text.trim().isNotEmpty) 'notes': _notes.text.trim(),
       'is_primary': _isPrimary,
+      if (_senderName.text.trim().isNotEmpty)
+        'sender_name': _senderName.text.trim(),
+      if (_senderPhone.text.trim().isNotEmpty)
+        'sender_phone': _senderPhone.text.trim(),
+      if (_senderAddress.text.trim().isNotEmpty)
+        'sender_address': _senderAddress.text.trim(),
+      if (_senderNotes.text.trim().isNotEmpty)
+        'sender_notes': _senderNotes.text.trim(),
     };
     try {
       if (_isEdit) {
@@ -266,6 +288,93 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Catatan (opsional)',
                       prefixIcon: Icon(Icons.note_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  // ── Sender Address Section ──
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.05),
+                      border: Border.all(color: AppColors.divider),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.local_shipping_outlined,
+                                size: 16, color: AppColors.primary),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Alamat Pengirim',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '(opsional)',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Untuk dropship / reseller — tampilkan di label pengiriman',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        TextFormField(
+                          controller: _senderName,
+                          decoration: const InputDecoration(
+                            labelText: 'Nama Pengirim',
+                            hintText: 'Contoh: E-Clont Solusi Energi',
+                            prefixIcon: Icon(Icons.business_outlined),
+                            isDense: true,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        TextFormField(
+                          controller: _senderPhone,
+                          keyboardType: TextInputType.phone,
+                          decoration: const InputDecoration(
+                            labelText: 'No. HP Pengirim',
+                            prefixIcon: Icon(Icons.phone_outlined),
+                            isDense: true,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        TextFormField(
+                          controller: _senderAddress,
+                          maxLines: 2,
+                          decoration: const InputDecoration(
+                            labelText: 'Alamat Pengirim',
+                            hintText: 'Contoh: Jl. AMD No.10, Makassar 90222',
+                            prefixIcon: Icon(Icons.location_on_outlined),
+                            isDense: true,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        TextFormField(
+                          controller: _senderNotes,
+                          decoration: const InputDecoration(
+                            labelText: 'Catatan Pengirim (opsional)',
+                            hintText: 'Contoh: Tanpa bon, packing rapat',
+                            prefixIcon: Icon(Icons.note_outlined),
+                            isDense: true,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
