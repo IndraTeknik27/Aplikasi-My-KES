@@ -93,7 +93,7 @@ class ApiException implements Exception {
 class ApiClient {
   ApiClient._();
 
-  static const String baseUrl = 'http://karteks-energy-solution.test/api/v1';
+  static const String baseUrl = 'https://shop.karteksofficial.com/api/v1';
 
   static final ApiClient instance = ApiClient._();
 
